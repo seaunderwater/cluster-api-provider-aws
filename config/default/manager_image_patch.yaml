@@ -8,5 +8,15 @@ spec:
     spec:
       containers:
       # Change the value of image field below to your controller image URL
-      - image: gcr.io/k8s-staging-cluster-api-aws/cluster-api-aws-controller:latest
+      - image: artifactory.cloud.capitalone.com/k8s-multicluster/cluster-api-aws-controller-amd64:dev
         name: manager
+      # (andrewmy) adding our proxy env vars here for dev
+      env:
+        - name: http_proxy
+          value: http://aws-proxy-dev.cloud.capitalone.com:8099
+        - name: https_proxy
+          value: http://aws-proxy-dev.cloud.capitalone.com:8099
+        - name: no_proxy
+          value: 169.254.169.254,192.168.0.1
+        - name: AWS_REGION
+          value: us-east-1

@@ -13,19 +13,19 @@
 # limitations under the License.
 
 # Build the manager binary
-FROM golang:1.12.9 as builder
+FROM artifactory-dockerhub.cloud.capitalone.com/golang:1.12.9 as builder
 WORKDIR /workspace
 
 # Run this with docker build --build_arg $(go env GOPROXY) to override the goproxy
-ARG goproxy=https://proxy.golang.org
-ENV GOPROXY=$goproxy
+#ARG goproxy=https://proxy.golang.org
+#ENV GOPROXY=$goproxy
 
 # Copy the Go Modules manifests
-COPY go.mod go.mod
-COPY go.sum go.sum
+#COPY go.mod go.mod
+#COPY go.sum go.sum
 # Cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-RUN go mod download
+#RUN go mod download
 
 # Copy the sources
 COPY ./ ./
@@ -33,11 +33,11 @@ COPY ./ ./
 # Build
 ARG ARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} \
-    go build -a -ldflags '-extldflags "-static"' \
+    go build -mod=vendor -a -ldflags '-extldflags "-static"' \
     -o manager .
 
 # Copy the controller-manager into a thin image
-FROM gcr.io/distroless/static:latest
+FROM artifactory-gcr.cloud.capitalone.com/distroless/static:latest
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER nobody

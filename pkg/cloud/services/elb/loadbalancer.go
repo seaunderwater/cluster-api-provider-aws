@@ -196,7 +196,10 @@ func (s *Service) getAPIServerClassicELBSpec() *infrav1.ClassicELB {
 
 	// The load balancer APIs require us to only attach one subnet for each AZ.
 	zones := map[string]struct{}{}
-	for _, sn := range s.scope.Subnets().FilterPublic() {
+	// TODO(andrewmy): AWS provider filters out non-public subnets, but all capital one subnets are private, so...
+	//publicSubnets := s.scope.Subnets().FilterPublic()
+	allSubnets := s.scope.Subnets()
+	for _, sn := range allSubnets {
 		if _, ok := zones[sn.AvailabilityZone]; !ok {
 			zones[sn.AvailabilityZone] = struct{}{}
 			res.SubnetIDs = append(res.SubnetIDs, sn.ID)

@@ -59,6 +59,9 @@ func (s *Service) reconcileSecurityGroups() error {
 		return err
 	}
 
+	fmt.Println("Skipping security group reconciliation")
+	return nil
+
 	// Declare all security group roles that the reconcile loop takes care of.
 	roles := []infrav1.SecurityGroupRole{
 		infrav1.SecurityGroupBastion,

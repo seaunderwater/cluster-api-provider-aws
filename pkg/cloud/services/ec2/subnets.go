@@ -118,7 +118,8 @@ LoopExisting:
 		}
 
 		// TODO(vincepri): delete extra subnets that exist and are managed by us.
-		subnets = append(subnets, exsn)
+		// TODO(andrewmy): do not add pre-existing subnets as we only want to deal with subnets specified in the cluster spec
+		//subnets = append(subnets, exsn)
 	}
 
 	// Proceed to create the rest of the subnets that don't have an ID.
