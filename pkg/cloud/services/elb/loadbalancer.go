@@ -162,14 +162,19 @@ func GenerateELBName(clusterName string, elbName string) string {
 	return fmt.Sprintf("%s-%s", clusterName, elbName)
 }
 
+const (
+	SG_CONTROL_PLANE="sg-013ce0e3c047b0ece"
+	SG_INGRESS="sg-041666a14e6040e07"
+)
+
 func (s *Service) getAPIServerClassicELBSpec() *infrav1.ClassicELB {
 	res := &infrav1.ClassicELB{
 		Name:   GenerateELBName(s.scope.Name(), infrav1.APIServerRoleTagValue),
-		Scheme: infrav1.ClassicELBSchemeInternetFacing,
+		Scheme: infrav1.ClassicELBSchemeInternal,
 		Listeners: []*infrav1.ClassicELBListener{
 			{
 				Protocol:         infrav1.ClassicELBProtocolTCP,
-				Port:             6443,
+				Port:             443,
 				InstanceProtocol: infrav1.ClassicELBProtocolTCP,
 				InstancePort:     6443,
 			},
@@ -181,7 +186,7 @@ func (s *Service) getAPIServerClassicELBSpec() *infrav1.ClassicELB {
 			HealthyThreshold:   5,
 			UnhealthyThreshold: 3,
 		},
-		SecurityGroupIDs: []string{s.scope.SecurityGroups()[infrav1.SecurityGroupControlPlane].ID},
+		SecurityGroupIDs: []string{SG_CONTROL_PLANE},
 		Attributes: infrav1.ClassicELBAttributes{
 			IdleTimeout: 10 * time.Minute,
 		},

@@ -59,8 +59,6 @@ func (s *Service) reconcileSecurityGroups() error {
 		return err
 	}
 
-	fmt.Println("Skipping security group reconciliation")
-	return nil
 
 	// Declare all security group roles that the reconcile loop takes care of.
 	roles := []infrav1.SecurityGroupRole{
@@ -72,24 +70,35 @@ func (s *Service) reconcileSecurityGroups() error {
 
 	// First iteration makes sure that the security group are valid and fully created.
 	for _, role := range roles {
-		sg := s.getDefaultSecurityGroup(role)
+		sg := s.getSecurityGroupOverride(role)
+		if sg == nil {
+			s.scope.V(2).Info("Using default security group for role", "role", role)
+			sg = s.getDefaultSecurityGroup(role)
+		}
 		existing, ok := sgs[*sg.GroupName]
 
 		if !ok {
-			if err := s.createSecurityGroup(role, sg); err != nil {
-				return err
-			}
+			// TODO(andrewmy): do not try to create security groups
+			if true {
+				s.scope.V(2).Info("Skip creating security group for role", "role", role)
+			} else {
+				if err := s.createSecurityGroup(role, sg); err != nil {
+					return err
+				}
 
-			s.scope.SecurityGroups()[role] = infrav1.SecurityGroup{
-				ID:   *sg.GroupId,
-				Name: *sg.GroupName,
+				s.scope.SecurityGroups()[role] = infrav1.SecurityGroup{
+					ID:   *sg.GroupId,
+					Name: *sg.GroupName,
+				}
+				s.scope.V(2).Info("Created security group for role", "role", role, "security-group", s.scope.SecurityGroups()[role])
 			}
-			s.scope.V(2).Info("Created security group for role", "role", role, "security-group", s.scope.SecurityGroups()[role])
 			continue
 		}
 
 		// TODO(vincepri): validate / update security group if necessary.
 		s.scope.SecurityGroups()[role] = existing
+
+		continue
 
 		// Make sure tags are up to date.
 		if err := wait.WaitForWithRetryable(wait.NewBackoff(), func() (bool, error) {
@@ -328,8 +337,8 @@ func (s *Service) getSecurityGroupIngressRules(role infrav1.SecurityGroupRole) (
 			{
 				Description: "Kubernetes API",
 				Protocol:    infrav1.SecurityGroupProtocolTCP,
-				FromPort:    6443,
-				ToPort:      6443,
+				FromPort:    443,
+				ToPort:      443,
 				CidrBlocks:  []string{anyIPv4CidrBlock},
 			},
 			{
@@ -416,6 +425,19 @@ func (s *Service) getSecurityGroupIngressRules(role infrav1.SecurityGroupRole) (
 	}
 
 	return nil, errors.Errorf("Cannot determine ingress rules for unknown security group role %q", role)
+}
+
+func (s *Service) getSecurityGroupOverride(role infrav1.SecurityGroupRole) *ec2.SecurityGroup {
+	sg,ok := s.scope.SecurityGroupOverrides()[role]
+	if !ok {
+		return nil
+	}
+	s.scope.V(2).Info("Using security group override for role", "role", role)
+	return &ec2.SecurityGroup{
+		GroupName: aws.String(sg.Name),
+		VpcId:     aws.String(s.scope.VPC().ID),
+		Tags:      converters.MapToTags(infrav1.Build(s.getSecurityGroupTagParams(sg.Name, "", role))),
+	}
 }
 
 func (s *Service) getSecurityGroupName(clusterName string, role infrav1.SecurityGroupRole) string {

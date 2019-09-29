@@ -38,7 +38,7 @@ import (
 
 const (
 	controllerName  = "awscluster-controller"
-	apiEndpointPort = 6443
+	apiEndpointPort = 443
 )
 
 // AWSClusterReconciler reconciles a AwsCluster object
@@ -153,6 +153,7 @@ func reconcileNormal(clusterScope *scope.ClusterScope) (reconcile.Result, error)
 		return reconcile.Result{}, errors.Wrapf(err, "failed to reconcile network for AWSCluster %s/%s", awsCluster.Namespace, awsCluster.Name)
 	}
 
+	// TODO(andrewmy): don't bother with bastions
 	if err := ec2Service.ReconcileBastion(); err != nil {
 		return reconcile.Result{}, errors.Wrapf(err, "failed to reconcile bastion host for AWSCluster %s/%s", awsCluster.Namespace, awsCluster.Name)
 	}

@@ -44,7 +44,10 @@ func (r *AWSMachineReconciler) ensureSecurityGroups(ec2svc service.EC2MachineInt
 		return false, err
 	}
 
-	core, err := ec2svc.GetCoreSecurityGroups(scope)
+	// TODO(andrewmy): HACK
+
+	core, err := ec2svc.GetOneKubeSecurityGroups(scope)
+	//core, err := ec2svc.GetCoreSecurityGroups(scope)
 	if err != nil {
 		return false, err
 	}

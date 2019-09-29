@@ -169,6 +169,10 @@ type NetworkSpec struct {
 	// Subnets configuration.
 	// +optional
 	Subnets Subnets `json:"subnets,omitempty"`
+
+	// Security Group overrides
+	// +optional
+	SecurityGroups map[SecurityGroupRole]SecurityGroup `json:"securityGroups,omitempty"`
 }
 
 // APIEndpoint represents a reachable Kubernetes API endpoint.

@@ -168,20 +168,23 @@ func (s *Service) CreateInstance(scope *scope.MachineScope) (*infrav1.Instance, 
 	input.UserData = aws.String(*scope.Machine.Spec.Bootstrap.Data)
 
 	// Set security groups.
-	ids, err := s.GetCoreSecurityGroups(scope)
+	// TODO(andrewmy): this needs to work different for us
+	//ids, err := s.GetCoreSecurityGroups(scope)
+	ids, err := s.GetOneKubeSecurityGroups(scope)
 	if err != nil {
 		return nil, err
 	}
 	input.SecurityGroupIDs = append(input.SecurityGroupIDs, ids...)
 
 	// Pick SSH key, if any.
+	// TODO(andrewmyhre): disable using a default SSH key name
 	if scope.AWSMachine.Spec.SSHKeyName != "" {
 		input.SSHKeyName = aws.String(scope.AWSMachine.Spec.SSHKeyName)
-	} else {
-		input.SSHKeyName = aws.String(defaultSSHKeyName)
-	}
+	} //else {
+	//	input.SSHKeyName = aws.String(defaultSSHKeyName)
+	//}
 
-	s.scope.V(2).Info("Running instance", "machine-role", scope.Role())
+	s.scope.V(2).Info("Running instance", "machine-role", scope.Role(), "subnet", input.SubnetID)
 	out, err := s.runInstance(scope.Role(), input)
 	if err != nil {
 		// Only record the failure event if the error is not related to failed dependencies.
@@ -194,6 +197,38 @@ func (s *Service) CreateInstance(scope *scope.MachineScope) (*infrav1.Instance, 
 
 	record.Eventf(scope.Machine, "SuccessfulCreate", "Created new %s instance with id %q", scope.Role(), out.ID)
 	return out, nil
+}
+
+const (
+	SG_ALL_INSTANCES="sg-0e617faf991737fe3"
+	SG_CORE_SERVICES="sg-0673780aed3983d2f"
+	SG_NODE="sg-06846b80cb4165d4b"
+	SG_ETCD="sg-05dbe3de35b040704"
+	SG_MASTER="sg-08660643b73885a01"
+	SG_WORKER="sg-02e4f77a367dd3e21"
+	SG_API="sg-013ce0e3c047b0ece"
+	SG_INGRESS="sg-041666a14e6040e07"
+)
+
+// GetCoreSecurityGroups looks up the security group IDs managed by this actuator
+// They are considered "core" to its proper functioning
+func (s *Service) GetOneKubeSecurityGroups(scope *scope.MachineScope) ([]string, error) {
+	// These are common across both controlplane and node machines
+	ids := make([]string, 0)
+	ids = append(ids, SG_ALL_INSTANCES)
+	ids = append(ids, SG_CORE_SERVICES)
+	switch scope.Role() {
+	case "node":
+		ids = append(ids, SG_NODE)
+		ids = append(ids, SG_WORKER)
+	case "control-plane":
+		ids = append(ids, SG_NODE)
+		ids = append(ids, SG_MASTER)
+		ids = append(ids, SG_ETCD)
+	default:
+		return nil, errors.Errorf("Unknown node role %q", scope.Role())
+	}
+	return ids, nil
 }
 
 // GetCoreSecurityGroups looks up the security group IDs managed by this actuator
@@ -272,6 +307,7 @@ func (s *Service) runInstance(role string, i *infrav1.Instance) (*infrav1.Instan
 		MinCount:     aws.Int64(1),
 	}
 
+	// TODO(andrewmy): bootstrap userdata is set here
 	if i.UserData != nil {
 		var buf bytes.Buffer
 
@@ -332,6 +368,8 @@ func (s *Service) runInstance(role string, i *infrav1.Instance) (*infrav1.Instan
 
 		input.TagSpecifications = append(input.TagSpecifications, spec)
 	}
+
+	s.scope.V(2).Info("RunInstances", "input", input)
 
 	out, err := s.scope.EC2.RunInstances(input)
 	if err != nil {

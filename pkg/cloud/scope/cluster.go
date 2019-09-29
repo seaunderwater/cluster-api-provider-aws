@@ -126,6 +126,11 @@ func (s *ClusterScope) Subnets() infrav1.Subnets {
 	return s.AWSCluster.Spec.NetworkSpec.Subnets
 }
 
+// SecurityGroupOverrides returns the cluster security group overrides as a map, it creates the map if empty.
+func (s *ClusterScope) SecurityGroupOverrides() map[infrav1.SecurityGroupRole]infrav1.SecurityGroup {
+	return s.AWSCluster.Spec.NetworkSpec.SecurityGroups
+}
+
 // SecurityGroups returns the cluster security groups as a map, it creates the map if empty.
 func (s *ClusterScope) SecurityGroups() map[infrav1.SecurityGroupRole]infrav1.SecurityGroup {
 	return s.AWSCluster.Status.Network.SecurityGroups
