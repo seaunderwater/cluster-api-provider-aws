@@ -120,6 +120,18 @@ func (r *AWSManagedControlPlaneReconciler) Reconcile(req ctrl.Request) (res ctrl
 		return ctrl.Result{}, nil
 	}
 
+	awsCluster := &infrav1.AWSCluster{}
+	infraClusterName := client.ObjectKey{
+		Namespace: cluster.Spec.InfrastructureRef.Namespace,
+		Name:      cluster.Spec.InfrastructureRef.Name,
+	}
+
+	if err := r.Client.Get(ctx, infraClusterName, awsCluster); err != nil {
+		// AWSCluster is not ready
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+
 	if util.IsPaused(cluster, awsControlPlane) {
 		logger.Info("Reconciliation is paused for this object")
 		return ctrl.Result{}, nil
@@ -131,6 +143,7 @@ func (r *AWSManagedControlPlaneReconciler) Reconcile(req ctrl.Request) (res ctrl
 		Client:               r.Client,
 		Logger:               logger,
 		Cluster:              cluster,
+		AWSCluster:			  awsCluster,
 		ControlPlane:         awsControlPlane,
 		ControllerName:       "awsmanagedcontrolplane",
 		EnableIAM:            r.EnableIAM,

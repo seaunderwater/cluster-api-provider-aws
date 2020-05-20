@@ -55,7 +55,7 @@ func NewClusterScope(params ClusterScopeParams) (*ClusterScope, error) {
 		params.Logger = klogr.New()
 	}
 
-	session, err := sessionForRegion(params.AWSCluster.Spec.Region)
+	session, err := sessionForClusterWithRegion(params.Client, params.AWSCluster, params.AWSCluster.Spec.Region, params.Logger)
 	if err != nil {
 		return nil, errors.Errorf("failed to create aws session: %v", err)
 	}
