@@ -118,6 +118,11 @@ func (s *Service) deleteNatGateways() error {
 		}
 	}
 
+	// EIPs.
+	if err := s.releaseAddresses(); err != nil {
+		return err
+	}
+
 	return nil
 }
 

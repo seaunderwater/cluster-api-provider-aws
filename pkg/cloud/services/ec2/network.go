@@ -88,11 +88,6 @@ func (s *Service) DeleteNetwork() (err error) {
 		return err
 	}
 
-	// EIPs.
-	if err := s.releaseAddresses(); err != nil {
-		return err
-	}
-
 	// Internet Gateways.
 	if err := s.deleteInternetGateways(); err != nil {
 		return err
