@@ -220,6 +220,8 @@ func (s *Service) describeVpcSubnets() (infrav1.Subnets, error) {
 		},
 	}
 
+	unmanagedVPC := s.scope.VPC().IsUnmanaged(s.scope.Name())
+
 	if s.scope.VPC().ID == "" {
 		input.Filters = append(input.Filters, filter.EC2.Cluster(s.scope.Name()))
 	} else {
@@ -237,9 +239,12 @@ func (s *Service) describeVpcSubnets() (infrav1.Subnets, error) {
 		return nil, err
 	}
 
-	natGateways, err := s.describeNatGatewaysBySubnet()
-	if err != nil {
-		return nil, err
+	natGateways := map[string]*ec2.NatGateway{}
+	if !unmanagedVPC {
+		natGateways, err = s.describeNatGatewaysBySubnet()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	subnets := make([]*infrav1.SubnetSpec, 0, len(out.Subnets))
