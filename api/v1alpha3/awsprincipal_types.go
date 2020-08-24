@@ -70,6 +70,10 @@ type AWSClusterStaticPrincipalSpec struct {
 	//  SecretAccessKey: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 	//  SessionToken: Optional
 	SecretRef corev1.SecretReference `json:"secretRef"`
+
+	// SourcePrincipalRef is a reference to another principal which will be chained to do
+	// role assumption.
+	SourcePrincipalRef *corev1.ObjectReference `json:"sourcePrincipalRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -108,7 +112,7 @@ type AWSClusterRolePrincipalSpec struct {
 
 	// SourcePrincipalRef is a reference to another principal which will be chained to do
 	// role assumption.
-	SourcePrincipalRef corev1.ObjectReference `json:"sourcePrincipalRef,omitempty"`
+	SourcePrincipalRef *corev1.ObjectReference `json:"sourcePrincipalRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true

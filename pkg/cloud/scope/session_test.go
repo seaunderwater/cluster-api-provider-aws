@@ -338,7 +338,7 @@ func TestPrincipalParsing(t *testing.T) {
 			k8sClient := fake.NewFakeClientWithScheme(scheme)
 			awsConfig := aws.NewConfig()
 			tc.setup(k8sClient, t)
-			provider, err := getProviderForCluster(context.Background(), k8sClient, &tc.awsCluster, awsConfig, klogr.New())
+			provider, err := getProvidersForCluster(context.Background(), k8sClient, &tc.awsCluster, awsConfig, klogr.New())
 			if tc.expectError {
 				if err == nil {
 					t.Fatal("Expected an error but didn't get one")
