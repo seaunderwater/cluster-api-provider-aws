@@ -94,7 +94,7 @@ func buildProvidersForRef(providers []AWSPrincipalTypeProvider, ctx context.Cont
 			if err != nil {
 				return providers, err
 			}
-			log.V(4).Info("Found an AWSClusterStaticPrincipal", "principal", principal.GetName())
+			log.Info("Found an AWSClusterStaticPrincipal", "principal", principal.GetName())
 			if !clusterIsPermittedToUsePrincipal(awsCluster, principal.Spec.AWSClusterPrincipalSpec) {
 				return providers, fmt.Errorf("Cluster %s%s is not permitted to use principal %s/%s", awsCluster.Namespace, awsCluster.Name, principal.Namespace, principal.Name)
 			}
@@ -106,7 +106,7 @@ func buildProvidersForRef(providers []AWSPrincipalTypeProvider, ctx context.Cont
 			if err != nil {
 				return providers, err
 			}
-			log.V(4).Info("Found an AWSClusterRolePrincipal", "principal", principal.GetName())
+			log.Info("Found an AWSClusterRolePrincipal", "principal", principal.GetName())
 			provider = NewAWSRolePrincipalTypeProvider(principal, awsConfig, log)
 			providers = append(providers, provider)
 			if principal.Spec.SourcePrincipalRef != nil {
@@ -128,7 +128,7 @@ func buildProvidersForRef(providers []AWSPrincipalTypeProvider, ctx context.Cont
 			return providers, fmt.Errorf("No such provider known: '%s'",ref.Kind)
 		}
 	} else {
-		log.V(4).Info("AWSCluster does not have a PrincipalRef specified")
+		log.Info("AWSCluster does not have a PrincipalRef specified")
 	}
 
 	return providers, nil

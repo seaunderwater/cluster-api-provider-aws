@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,7 +22,7 @@ func TestPrincipalParsing(t *testing.T) {
 		principalRef *corev1.ObjectReference
 		principal    runtime.Object
 		setup func(client.Client, *testing.T)
-		expect func(credentials.Provider)
+		expect func([]AWSPrincipalTypeProvider)
 		expectError bool
 	}{
 		{
@@ -41,9 +40,9 @@ func TestPrincipalParsing(t *testing.T) {
 			},
 			setup: func(c client.Client, t *testing.T) {
 			},
-			expect: func(provider credentials.Provider) {
-				if provider != nil {
-					t.Fatalf("Expected provider to be nil, got: %v", provider)
+			expect: func(providers []AWSPrincipalTypeProvider) {
+				if len(providers) != 0 {
+					t.Fatalf("Expected 0 providers, got %v", len(providers))
 				}
 			},
 		},
@@ -110,13 +109,14 @@ func TestPrincipalParsing(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			expect: func(provider credentials.Provider) {
-				if provider == nil {
-					t.Fatal("Expected provider not to be nil")
+			expect: func(providers []AWSPrincipalTypeProvider) {
+				if len(providers) != 1 {
+					t.Fatalf("Expected 1 provider, got %v", len(providers))
 				}
+				provider := providers[0]
 				p, ok := provider.(*AWSStaticPrincipalTypeProvider)
 				if !ok {
-					t.Fatal("Expected provider to be of type AWSStaticPrincipalTypeProvider")
+					t.Fatal("Expected providers to be of type AWSStaticPrincipalTypeProvider")
 				}
 				if p.accessKeyId != "1234567890" {
 					t.Fatalf("Expected AccessKeyID to be '%s', got '%s'", "1234567890", p.accessKeyId)
@@ -129,6 +129,107 @@ func TestPrincipalParsing(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "Can build a chain principal",
+			awsCluster: infrav1.AWSCluster{
+				ObjectMeta: metav1.ObjectMeta {
+					Name: "cluster3",
+					Namespace: "default",
+				},
+				TypeMeta: metav1.TypeMeta {
+					APIVersion: infrav1.GroupVersion.String(),
+					Kind: "AWSCluster",
+				},
+				Spec: infrav1.AWSClusterSpec {
+					PrincipalRef: &corev1.ObjectReference{
+						Name: "role-principal",
+						Namespace: "default",
+						Kind: "AWSClusterRolePrincipal",
+						APIVersion: infrav1.GroupVersion.String(),
+					},
+				},
+			},
+			setup: func(c client.Client, t *testing.T) {
+				staticPrincipal := &infrav1.AWSClusterStaticPrincipal {
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "static-principal",
+						Namespace: "default",
+					},
+					Spec: infrav1.AWSClusterStaticPrincipalSpec {
+						SecretRef: corev1.SecretReference{
+							Name: "static-credentials-secret",
+							Namespace: "default",
+						},
+						AWSClusterPrincipalSpec: infrav1.AWSClusterPrincipalSpec{
+							AllowedNamespaces: metav1.LabelSelector {
+								MatchLabels: map[string]string {
+
+								},
+							},
+						},
+					},
+				}
+				staticPrincipal.SetGroupVersionKind(infrav1.GroupVersion.WithKind("AWSClusterStaticPrincipal"))
+				err := c.Create(context.Background(), staticPrincipal)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				credentialsSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta {
+						Name: "static-credentials-secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte {
+						"AccessKeyID": []byte("1234567890"),
+						"SecretAccessKey": []byte("abcdefghijklmnop"),
+						"SessionToken": []byte("asdfasdfasdf"),
+					},
+				}
+				credentialsSecret.SetGroupVersionKind(schema.GroupVersionKind{Group: "", Kind: "Secret", Version: "v1"})
+				err = c.Create(context.Background(), credentialsSecret)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				rolePrincipal := &infrav1.AWSClusterRolePrincipal {
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "role-principal",
+						Namespace: "default",
+					},
+					Spec: infrav1.AWSClusterRolePrincipalSpec {
+						AWSRoleSpec: infrav1.AWSRoleSpec {
+							RoleArn: "role-arn",
+							SessionName: "test-session",
+						},
+						SourcePrincipalRef: &corev1.ObjectReference{
+							Name: "static-principal",
+							Kind: "AWSClusterStaticPrincipal",
+							Namespace: "default",
+							APIVersion: infrav1.GroupVersion.String(),
+						},
+						AWSClusterPrincipalSpec: infrav1.AWSClusterPrincipalSpec{
+							AllowedNamespaces: metav1.LabelSelector {
+								MatchLabels: map[string]string {
+
+								},
+							},
+						},
+					},
+				}
+				rolePrincipal.SetGroupVersionKind(infrav1.GroupVersion.WithKind("AWSClusterRolePrincipal"))
+				err = c.Create(context.Background(), rolePrincipal)
+				if err != nil {
+					t.Fatal(err)
+				}
+			},
+			expect: func(providers []AWSPrincipalTypeProvider) {
+				if len(providers) != 2 {
+					t.Fatalf("Expected 2 providers, got %v", len(providers))
+				}
+			},
+		},
+
 		// // TODO (andrewmy): figure out how label selectors work
 		//{
 		//	name: "Denies using a Principal from a non-whitelisted namespace",
@@ -243,14 +344,14 @@ func TestPrincipalParsing(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			expect: func(provider credentials.Provider) {
-				// session is a role Principal
-				if provider == nil {
-					t.Fatal("Expected provider not to be nil")
+			expect: func(providers []AWSPrincipalTypeProvider) {
+				if len(providers) != 1 {
+					t.Fatalf("Expected 1 providers, got %v", len(providers))
 				}
+				provider := providers[0]
 				p, ok := provider.(*AWSRolePrincipalTypeProvider)
 				if !ok {
-					t.Fatal("Expected provider to be of type AWSRolePrincipalTypeProvider")
+					t.Fatal("Expected providers to be of type AWSRolePrincipalTypeProvider")
 				}
 				if p.Principal.Spec.RoleArn != "role-arn" {
 					t.Fatal(fmt.Errorf("Expected Role Provider ARN to be 'role-arn', got '%s'", p.Principal.Spec.RoleArn))
@@ -338,7 +439,7 @@ func TestPrincipalParsing(t *testing.T) {
 			k8sClient := fake.NewFakeClientWithScheme(scheme)
 			awsConfig := aws.NewConfig()
 			tc.setup(k8sClient, t)
-			provider, err := getProvidersForCluster(context.Background(), k8sClient, &tc.awsCluster, awsConfig, klogr.New())
+			providers, err := getProvidersForCluster(context.Background(), k8sClient, &tc.awsCluster, awsConfig, klogr.New())
 			if tc.expectError {
 				if err == nil {
 					t.Fatal("Expected an error but didn't get one")
@@ -347,7 +448,7 @@ func TestPrincipalParsing(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				tc.expect(provider)
+				tc.expect(providers)
 			}
 		})
 	}
