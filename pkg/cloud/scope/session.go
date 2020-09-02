@@ -106,6 +106,12 @@ func buildProvidersForRef(providers []AWSPrincipalTypeProvider, ctx context.Cont
 			}
 			provider = NewAWSStaticPrincipalTypeProvider(principal, secret)
 			providers = append(providers, provider)
+			if principal.Spec.SourcePrincipalRef != nil {
+				providers, err = buildProvidersForRef(providers, ctx, k8sClient, awsCluster, principal.Spec.SourcePrincipalRef, awsConfig, log)
+				if err != nil {
+					return providers, client.IgnoreNotFound(err)
+				}
+			}
 		case "AWSClusterRolePrincipal":
 			principal := &infrav1.AWSClusterRolePrincipal{}
 			err := k8sClient.Get(ctx, principalObjectKey, principal)
@@ -129,6 +135,12 @@ func buildProvidersForRef(providers []AWSPrincipalTypeProvider, ctx context.Cont
 			}
 			provider = NewAWSServiceAccountPrincipalTypeProvider(principal)
 			providers = append(providers, provider)
+			if principal.Spec.SourcePrincipalRef != nil {
+				providers, err = buildProvidersForRef(providers, ctx, k8sClient, awsCluster, principal.Spec.SourcePrincipalRef, awsConfig, log)
+				if err != nil {
+					return providers, client.IgnoreNotFound(err)
+				}
+			}
 			return providers, errors.New("AWSServiceAccountPrincipal not implemented")
 		default:
 			return providers, fmt.Errorf("No such provider known: '%s'",ref.Kind)

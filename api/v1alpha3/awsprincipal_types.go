@@ -150,6 +150,10 @@ type AWSServiceAccountPrincipalSpec struct {
 	// +optional
 	// +default=86400
 	ExpirationSeconds int `json:"expirationSeconds"`
+
+	// SourcePrincipalRef is a reference to another principal which will be chained to do
+	// role assumption.
+	SourcePrincipalRef *corev1.ObjectReference `json:"sourcePrincipalRef,omitempty"`
 }
 
 func init() {
