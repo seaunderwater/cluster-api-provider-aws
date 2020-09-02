@@ -21,8 +21,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	infrav1 "sigs.k8s.io/cluster-api-provider-aws/api/v1alpha3"
@@ -80,8 +80,14 @@ func sessionForClusterWithRegion(k8sClient client.Client, awsCluster *infrav1.AW
 
 func buildProvidersForRef(providers []AWSPrincipalTypeProvider, ctx context.Context, k8sClient client.Client, awsCluster *infrav1.AWSCluster, ref *corev1.ObjectReference, awsConfig *aws.Config, log logr.Logger) ([]AWSPrincipalTypeProvider, error) {
 	if ref != nil {
+		namespace := ref.Namespace
+		// if the namespace isn't specified then assume it's in the same namespace as the AWSCluster
+		if namespace == "" {
+			namespace = awsCluster.Namespace
+		}
 		var provider AWSPrincipalTypeProvider
-		principalObjectKey := client.ObjectKey{Name: ref.Name, Namespace: ref.Namespace}
+		principalObjectKey := client.ObjectKey{Name: ref.Name, Namespace: namespace}
+		log.Info("Get Principal", "Key", principalObjectKey)
 		switch ref.Kind {
 		case "AWSClusterStaticPrincipal":
 			principal := &infrav1.AWSClusterStaticPrincipal{}
@@ -112,7 +118,7 @@ func buildProvidersForRef(providers []AWSPrincipalTypeProvider, ctx context.Cont
 			if principal.Spec.SourcePrincipalRef != nil {
 				providers, err = buildProvidersForRef(providers, ctx, k8sClient, awsCluster, principal.Spec.SourcePrincipalRef, awsConfig, log)
 				if err != nil {
-					return providers, err
+					return providers, client.IgnoreNotFound(err)
 				}
 			}
 		case "AWSServiceAccountPrincipal":
