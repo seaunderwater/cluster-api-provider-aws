@@ -16,7 +16,7 @@ spec:
     listKind: AWSClusterRolePrincipalList
     plural: awsclusterroleprincipals
     singular: awsclusterroleprincipal
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha3
     schema:

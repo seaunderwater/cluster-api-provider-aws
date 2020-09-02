@@ -40,7 +40,7 @@ type AWSRoleSpec struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:path=awsclusterstaticprincipals,scope=Cluster,categories=cluster-api
+// +kubebuilder:resource:path=awsclusterstaticprincipals,scope=Namespaced,categories=cluster-api
 // +kubebuilder:storageversion
 
 // AWSClusterStaticPrincipal represents a reference to an AWS access key ID and
@@ -77,7 +77,7 @@ type AWSClusterStaticPrincipalSpec struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:path=awsclusterroleprincipals,scope=Cluster,categories=cluster-api
+// +kubebuilder:resource:path=awsclusterroleprincipals,scope=Namespaced,categories=cluster-api
 type AWSClusterRolePrincipal struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -116,7 +116,7 @@ type AWSClusterRolePrincipalSpec struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:path=awsserviceaccountprincipals,scope=Cluster,categories=cluster-api
+// +kubebuilder:resource:path=awsserviceaccountprincipals,scope=Namespaced,categories=cluster-api
 type AWSServiceAccountPrincipal struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

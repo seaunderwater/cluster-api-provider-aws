@@ -16,7 +16,7 @@ spec:
     listKind: AWSClusterStaticPrincipalList
     plural: awsclusterstaticprincipals
     singular: awsclusterstaticprincipal
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha3
     schema:
