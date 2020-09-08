@@ -131,6 +131,11 @@ func (s *ManagedControlPlaneScope) SecurityGroups() map[infrav1.SecurityGroupRol
 	return s.ControlPlane.Status.Network.SecurityGroups
 }
 
+// SecurityGroupOverrides returns the the security groups that are overridden in the ControlPlane spec.
+func (s *ManagedControlPlaneScope) SecurityGroupOverrides() map[infrav1.SecurityGroupRole]string {
+	return s.ControlPlane.Spec.NetworkSpec.SecurityGroupOverrides
+}
+
 // Name returns the CAPI cluster name.
 func (s *ManagedControlPlaneScope) Name() string {
 	return s.Cluster.Name

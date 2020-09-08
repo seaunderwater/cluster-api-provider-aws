@@ -301,6 +301,15 @@ func (s *Service) getAPIServerClassicELBSpec() (*infrav1.ClassicELB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	securityGroupIDs := []string{}
+	controlPlaneLoadBalancer := s.scope.ControlPlaneLoadBalancer()
+	if controlPlaneLoadBalancer != nil && len(controlPlaneLoadBalancer.SecurityGroups) != 0 {
+		securityGroupIDs = append(securityGroupIDs, controlPlaneLoadBalancer.SecurityGroups...)
+	} else {
+		securityGroupIDs = append(securityGroupIDs, s.scope.SecurityGroups()[infrav1.SecurityGroupControlPlane].ID)
+	}
+
 	res := &infrav1.ClassicELB{
 		Name:   elbName,
 		Scheme: s.scope.ControlPlaneLoadBalancerScheme(),
@@ -319,7 +328,7 @@ func (s *Service) getAPIServerClassicELBSpec() (*infrav1.ClassicELB, error) {
 			HealthyThreshold:   5,
 			UnhealthyThreshold: 3,
 		},
-		SecurityGroupIDs: []string{s.scope.SecurityGroups()[infrav1.SecurityGroupAPIServerLB].ID},
+		SecurityGroupIDs: securityGroupIDs,
 		Attributes: infrav1.ClassicELBAttributes{
 			IdleTimeout: 10 * time.Minute,
 		},
